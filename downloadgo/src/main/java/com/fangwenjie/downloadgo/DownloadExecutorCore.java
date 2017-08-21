@@ -1,61 +1,49 @@
-package com.fangwenjie.download;
+package com.fangwenjie.downloadgo;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Observable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import static com.fangwenjie.download.Task.RESULT_CANCEL;
-import static com.fangwenjie.download.Task.RESULT_SUCC;
+import static com.fangwenjie.downloadgo.Task.RESULT_CANCEL;
+import static com.fangwenjie.downloadgo.Task.RESULT_SUCC;
 
 /**
  * Created by fangwenjie on 2017/4/20.
  */
 
-class DownloadExecutorCore extends Observable {
-
+class DownloadExecutorCore {
     private LinkedBlockingDeque<Task> taskQueue = new LinkedBlockingDeque<>();
-    private List<Task> activeQueue;
-
-    private synchronized void addActiveTask(Task task) {
-        activeQueue.add(task);
-        setChanged();
-        notifyObservers("执行活动任务****" + task.getName());
-    }
-
-    private synchronized void removeActiveTask(Task task, int taskResultCode) {
-        activeQueue.add(task);
-        setChanged();
-        notifyObservers("end#" + task.getName() + "#resultCode#" + taskResultCode + "#status#" + task.getStatus());
-    }
+    private volatile List<Task> activeQueue = new LinkedList<>();
 
     DownloadExecutorCore() {
         int MAX_THREAD_POOL = 3;
         ExecutorService taskExecutor = Executors.newFixedThreadPool(MAX_THREAD_POOL);
         taskExecutor.execute(new TaskJobRunnable());
-        activeQueue = new LinkedList<>();
+    }
+
+    private synchronized void addActiveTask(Task task) {
+        activeQueue.add(task);
+    }
+
+    private synchronized void removeActiveTask(Task task) {
+        activeQueue.remove(task);
     }
 
     //添加下载任务
     void addTask(Task task) {
         taskQueue.add(task);
-        setChanged();
-        notifyObservers("添加任务");
     }
 
-
-    //移除下载任务
-    void removeTask(Task task) {
-        if (task != null) {
-            task.onCancel();
+    Task findTaskByTaskId(String taskId) {
+        for (Task task : activeQueue) {
+            if (task.taskId.equals(taskId)) {
+                return task;
+            }
         }
-
-        setChanged();
-        notifyObservers("取消任务");
+        return null;
     }
-
     //任务执行
     private class TaskJobRunnable implements Runnable {
         @Override
@@ -71,14 +59,15 @@ class DownloadExecutorCore extends Observable {
                         //执行任务
                         int resultCode = task.onExecuteJob();
                         if (resultCode == RESULT_SUCC) {
-                            removeActiveTask(task, resultCode);
+                            removeActiveTask(task);
                         } else if (resultCode == RESULT_CANCEL) {
-                            removeActiveTask(task, resultCode);
+                            removeActiveTask(task);
                         } else {
                             //下载失败了，保存状态
-                            removeActiveTask(task, resultCode);
-                            //支持重试，才会重新添加到队列中
+                            removeActiveTask(task);
                         }
+                    } else {
+                        //不需要进行下载操作
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();

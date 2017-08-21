@@ -2,8 +2,6 @@ package com.fangwenjie.sample;
 
 import android.app.Application;
 
-import com.fangwenjie.download.TaskCache;
-
 /**
  * Created by fangwenjie on 2017/5/24.
  */
@@ -20,8 +18,6 @@ public class DogApp extends Application {
     public void onCreate() {
         super.onCreate();
         instance = this;
-
-        //init cache
-        TaskCache.getInstance().initCache(new TaskCache.TaskCacheParam(getApplicationContext()));
+        DownloadGo.getInstance().init(getApplicationContext());
     }
 }
