@@ -1,25 +1,30 @@
 package com.fangwenjie.sample;
 
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.RemoteException;
-import android.support.v7.app.NotificationCompat;
-import android.widget.RemoteViews;
+import android.util.Log;
+import android.widget.Toast;
 
 import com.fangwenjie.downloadgo.DGoService;
-import com.fangwenjie.downloadgo.DownloadGoConst;
 import com.fangwenjie.downloadgo.GoEvent;
 import com.fangwenjie.downloadgo.GoMsg;
 import com.fangwenjie.downloadgo.IDownloadGoService;
 import com.fangwenjie.downloadgo.IGoMsgCallback;
 import com.fangwenjie.downloadgo.TaskMsg;
+import com.fangwenjie.downloadgo.task.TaskEvent;
+import com.fangwenjie.downloadgo.task.TaskStatus;
 
 import org.greenrobot.eventbus.EventBus;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 
 /**
@@ -53,6 +58,8 @@ public class DownloadGo {
     private boolean isBound;
     private IDownloadGoService downloadGoService;
 
+    private List<TaskMsg> taskPendingList = new ArrayList<>();
+
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -60,6 +67,15 @@ public class DownloadGo {
             isBound = true;
             try {
                 downloadGoService.addCallback(msgCallback);
+                if (!taskPendingList.isEmpty()) {
+                    Iterator<TaskMsg> iterator = taskPendingList.iterator();
+                    while (iterator.hasNext()) {
+                        TaskMsg task = iterator.next();
+                        if (addTask(task)) {
+                            iterator.remove();
+                        }
+                    }
+                }
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -75,36 +91,49 @@ public class DownloadGo {
     private IGoMsgCallback msgCallback = new IGoMsgCallback.Stub() {
         @Override
         public void onBarkMsg(final GoMsg msg) throws RemoteException {
-            long progress = msg.progress;
-            EventBus.getDefault().post(new MsgEvent(msg));
+            Log.d("DownloadGo", "barkMsg:" + msg.progress);
         }
 
         @Override
         public void onBarkEvent(final GoEvent event) throws RemoteException {
-            EventBus.getDefault().post(new StatusEvent(event));
-
             switch (event.event) {
-                case DownloadGoConst.START:
-//                    createDownloadNotification(DogApp.getInstance().getApplicationContext(), event.taskId, 0, "暂停");
-                    break;
-
-                case DownloadGoConst.PAUSE:
+                case TaskEvent.START:
+                    Log.d("DownloadGo", "GoEvent: Start");
+                    EventBus.getDefault().post(new DownloadEvent("Started"));
 
                     break;
 
-                case DownloadGoConst.RESUME:
+                case TaskEvent.PAUSE:
+                    Log.d("DownloadGo", "GoEvent: Pause");
+                    EventBus.getDefault().post(new DownloadEvent("Paused"));
 
                     break;
 
-                case DownloadGoConst.DELETE:
+                case TaskEvent.RESUME:
+                    Log.d("DownloadGo", "GoEvent: Resume");
+                    EventBus.getDefault().post(new DownloadEvent("resumed"));
 
                     break;
+                case TaskEvent.SUCC:
+                    EventBus.getDefault().post(new DownloadEvent("succed"));
 
-                case DownloadGoConst.COMPLETE:
-
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(GoApp.go.getApplicationContext(), "下载完成", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                     break;
 
-                case DownloadGoConst.FAIL:
+                case TaskEvent.FAIL:
+                    EventBus.getDefault().post(new DownloadEvent("failed"));
+
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(GoApp.go.getApplicationContext(), "下载失败", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                     break;
             }
         }
@@ -114,19 +143,26 @@ public class DownloadGo {
     /**
      * 添加任务
      *
-     * @param taskMsg
+     * @param taskMsg return
      */
-    public String addTask(TaskMsg taskMsg) {
+    public boolean addTask(TaskMsg taskMsg) {
         if (isBound) {
             try {
-                String taskId = downloadGoService.addTask(taskMsg);
-                return taskId;
+                String addMsg = downloadGoService.addTask(taskMsg);
+                Toast.makeText(GoApp.go.getApplicationContext(),addMsg,Toast.LENGTH_SHORT).show();
+                return true;
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
+        } else {
+            taskPendingList.add(taskMsg);
+            try {
+                init(GoApp.go);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-
-        return null;
+        return false;
     }
 
     /**
@@ -143,36 +179,18 @@ public class DownloadGo {
         }
     }
 
-
-    /*******下载相关通知，暂时丑陋的放在这里*******/
-    private NotificationCompat.Builder mBuilder;
-    private RemoteViews downloadNotifyView;
-
-    public void createDownloadNotification(Context context, String taskId, int progress, String pauseString) {
-
-        downloadNotifyView = new RemoteViews(context.getPackageName(), R.layout.download_notification_view);
-        downloadNotifyView.setProgressBar(R.id.download_notification_downloadprogress, 100, progress, false);
-        downloadNotifyView.setTextViewText(R.id.download_notification_pausebtn, pauseString);
-
-        //暂停任务
-        Intent pauseIntent = new Intent(context, DownloadNotificationReceiver.class);
-        pauseIntent.setAction("pause");
-        pauseIntent.putExtra("taskId", taskId);
-        PendingIntent pausePendingIntent = PendingIntent.getBroadcast(context, 0, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-        downloadNotifyView.setOnClickPendingIntent(R.id.download_notification_pausebtn, pausePendingIntent);
-
-        Intent contentIntent = new Intent(context, DownloadNotificationReceiver.class);
-        contentIntent.setAction("content");
-        PendingIntent contentPendingIntent = PendingIntent.getBroadcast(context, 2, contentIntent, 0);
-
-        mBuilder = new NotificationCompat.Builder(context);
-        mBuilder.setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContent(downloadNotifyView)
-                .setContentIntent(contentPendingIntent);
-
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(0, mBuilder.build());
+    /**
+     * 查询指定任务的当前状态
+     *
+     * @param taskId
+     * @return
+     */
+    public int getTaskStatus(String taskId) {
+        try {
+            return downloadGoService.findTask(taskId);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return TaskStatus.NONE;
     }
-
-
 }

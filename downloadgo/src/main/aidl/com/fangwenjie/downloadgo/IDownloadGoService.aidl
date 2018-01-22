@@ -12,7 +12,13 @@ interface IDownloadGoService {
      */
     String addTask(in TaskMsg msg);
 
+    /**
+    *   查找任务并且返回任务的状态
+    */
+    int findTask(String taskId);
+
     void onSendTaskEvent(String taskId,int TaskEvent);
 
     void addCallback(in IGoMsgCallback callback);
+
 }

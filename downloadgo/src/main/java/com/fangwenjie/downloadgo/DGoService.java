@@ -7,23 +7,61 @@ import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.fangwenjie.downloadgo.task.GoTask;
+import com.fangwenjie.downloadgo.task.TaskParams;
+
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
-import static com.fangwenjie.downloadgo.TaskEvent.CANCEL;
-import static com.fangwenjie.downloadgo.TaskEvent.PAUSE;
-import static com.fangwenjie.downloadgo.TaskEvent.RESUME;
 import static com.fangwenjie.downloadgo.Utils.GoDebug;
 import static com.fangwenjie.downloadgo.Utils.TAG;
-
+import static com.fangwenjie.downloadgo.task.TaskEvent.PAUSE;
+import static com.fangwenjie.downloadgo.task.TaskEvent.RESUME;
 /**
  * Created by fangwenjie on 2017/6/12.
  */
 
 public class DGoService extends Service {
-    private DownloadExecutorCore executorCore;
-    private volatile TaskReportProvider taskReportProvider;
+    DownloadExecutorCore executorCore;
+    volatile TaskReportProvider taskReportProvider;
+    IGoMsgCallback msgCallback;
+    public IDownloadGoService.Stub mBinder = new IDownloadGoService.Stub() {
+
+        @Override
+        public String addTask(TaskMsg msg) throws RemoteException {
+            return addNewTask(msg);
+        }
+
+        @Override
+        public int findTask(String taskId) throws RemoteException {
+            return executorCore.getTaskStatus(taskId);
+        }
+
+        @Override
+        public void onSendTaskEvent(String taskId, final int TaskEvent) throws RemoteException {
+            switch (TaskEvent) {
+                case PAUSE:
+                    if (executorCore != null) {
+                        executorCore.pause(taskId);
+                    }
+                    break;
+                case RESUME:
+                    if (executorCore != null) {
+                        executorCore.resume(taskId);
+                    }
+                    break;
+            }
+
+        }
+
+        @Override
+        public void addCallback(IGoMsgCallback callback) throws RemoteException {
+            msgCallback = callback;
+        }
+
+
+    };
 
     @Nullable
     @Override
@@ -42,8 +80,9 @@ public class DGoService extends Service {
     @Override
     public void onCreate() {
         EventBus.getDefault().register(this);
-        executorCore = new DownloadExecutorCore();
-        this.taskReportProvider = new TaskProvider(getApplicationContext());
+
+        taskReportProvider = new TaskProvider(getApplicationContext());
+        executorCore = new DownloadExecutorCore(taskReportProvider);
     }
 
     @Override
@@ -59,7 +98,7 @@ public class DGoService extends Service {
 
         if (msgCallback != null) {
             try {
-                GoEvent goEvent = new GoEvent(event.msg, event.event, event.filePath, event.taskId);
+                GoEvent goEvent = new GoEvent("DownloadGo", event.event, event.filePath, event.taskId);
                 goEvent.filePath = event.filePath;
                 if (GoDebug) {
                     Log.d(TAG, "goEvent #" + goEvent.toString());
@@ -94,53 +133,20 @@ public class DGoService extends Service {
         }
     }
 
-    public IDownloadGoService.Stub mBinder = new IDownloadGoService.Stub() {
-
-        @Override
-        public String addTask(TaskMsg msg) throws RemoteException {
-            if (GoDebug) {
-                Log.d(TAG, "goMsg #" + msg.toString());
-            }
-
-            Task task = new Task.Builder()
-                    .setName(msg.taskName)
-                    .setUrl(msg.taskUrl)
-                    .build();
-            task.setTaskReportProvider(taskReportProvider);
-            executorCore.addTask(task);
-
-            return task.taskId;
+    String addNewTask(TaskMsg msg) {
+        if (GoDebug) {
+            Log.d(TAG, "add new task #" + msg.toString());
         }
-
-        @Override
-        public void onSendTaskEvent(String taskId, final int TaskEvent) throws RemoteException {
-            Task task = executorCore.findTaskByTaskId(taskId);
-            if (task != null) {
-                switch (TaskEvent) {
-                    case PAUSE:
-                        if (task.getStatus().equals(Task.Status.PAUSE)) {
-                            task.onResume();
-                        } else {
-                            task.onPause();
-                        }
-                        break;
-                    case RESUME:
-                        task.onResume();
-                        break;
-                    case CANCEL:
-                        task.onCancel();
-                        break;
-                }
-
-            }
+        if (msg.taskType == TaskMsg.TYPE_EXPLICIT) {
+            TaskParams params = new TaskParams(msg.taskType, msg.taskId, msg.taskName, msg.taskUrl, msg.fileName);
+            GoTask task = new GoTaskExplicit(params, taskReportProvider);
+            return executorCore.addExplicitTask((GoTaskExplicit) task);
+        } else if (msg.taskType == TaskMsg.TYPE_SILENCT) {
+            TaskParams params = new TaskParams(msg.taskType, msg.taskId, msg.taskName, msg.taskUrl, msg.fileName);
+            GoTaskSilence taskSilence = new GoTaskSilence(params, taskReportProvider);
+            return executorCore.addSilenceTask(taskSilence);
         }
-
-        @Override
-        public void addCallback(IGoMsgCallback callback) throws RemoteException {
-            msgCallback = callback;
-        }
-    };
-
-    private IGoMsgCallback msgCallback;
+        return "";
+    }
 
 }

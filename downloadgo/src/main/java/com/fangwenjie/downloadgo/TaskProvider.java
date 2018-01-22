@@ -19,9 +19,9 @@ import static com.fangwenjie.downloadgo.Utils.TAG;
 
 class TaskProvider extends SQLiteOpenHelper implements TaskReportProvider {
 
-    private static final String DOWNLOAD_TABLE = "task_download";
-    private static final String DB_NAME = "download_task.db";
-    private static final int DB_VERSION = 1;
+    static final String DOWNLOAD_TABLE = "task_download";
+    static final String DB_NAME = "download_task.db";
+    static final int DB_VERSION = 1;
 
     public TaskProvider(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -60,7 +60,11 @@ class TaskProvider extends SQLiteOpenHelper implements TaskReportProvider {
             }
             if (affectLine == -1) {
                 contentValues.remove(TaskDB.TASK_KEY);
-                int affectUpdateLine = database.update(DOWNLOAD_TABLE, contentValues, null, null);
+                int affectUpdateLine = database.update(
+                        DOWNLOAD_TABLE,
+                        contentValues,
+                        TaskDB.TASK_KEY + " = \"" + key + "\"",
+                        null);
                 if (GoDebug) {
                     Log.d(TAG, "affectUpdateLine #" + affectUpdateLine);
                 }
@@ -107,23 +111,27 @@ class TaskProvider extends SQLiteOpenHelper implements TaskReportProvider {
 
     @Override
     public void deleteTaskReport(String key) {
-        SQLiteDatabase database = getWritableDatabase();
+        SQLiteDatabase database = null;
         try {
+            database = getWritableDatabase();
             database.delete(
                     DOWNLOAD_TABLE,
-                    TaskDB.TASK_KEY + " = " + key,
+                    TaskDB.TASK_KEY + " = \"" + key + "\"",
                     null);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            database.close();
+            if (database != null) {
+                database.close();
+            }
         }
     }
 
     @Override
     public void clearTaskReport() {
-        SQLiteDatabase database = getWritableDatabase();
+        SQLiteDatabase database = null;
         try {
+            database = getWritableDatabase();
             database.delete(
                     DOWNLOAD_TABLE,
                     null,
@@ -131,7 +139,9 @@ class TaskProvider extends SQLiteOpenHelper implements TaskReportProvider {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            database.close();
+            if (database != null) {
+                database.close();
+            }
         }
     }
 

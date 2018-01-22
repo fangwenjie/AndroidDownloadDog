@@ -14,8 +14,8 @@ import static com.fangwenjie.downloadgo.Utils.TAG;
  */
 
 class FileStrategy {
-    private static File downloadGoFile;
-    private final static String goDir = "downloadGo";
+    static File downloadGoFile;
+    final static String goDir = "downloadGo";
 
     static File createDownloadGoDir(Context context) {
         File file;
@@ -76,12 +76,6 @@ class FileStrategy {
                 return false;
             }
         }
-    }
-
-    static boolean downloadGoDirAvailable() {
-        return downloadGoFile != null &&
-                downloadGoFile.exists() &&
-                downloadGoFile.canWrite();
     }
 
 }

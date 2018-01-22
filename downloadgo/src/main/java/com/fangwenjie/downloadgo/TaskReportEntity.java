@@ -21,12 +21,8 @@ class TaskReportEntity {
     public String fileType = "apk";//下载文件类型
     public String filePath;//下载文件的存储路径
 
-    public Task.Status getStatus() {
-        Task.Status st = Task.Status.findStatusByName(status);
-        if (GoDebug) {
-            Log.d(TAG, "TaskReportEntity # load task status #" + st.toString());
-        }
-        return st;
+    public String getStatus() {
+        return status;
     }
 
     public TaskReportEntity() {

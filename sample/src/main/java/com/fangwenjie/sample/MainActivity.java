@@ -1,14 +1,15 @@
 package com.fangwenjie.sample;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.view.View;
-import android.widget.ProgressBar;
+import android.text.TextUtils;
+import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.fangwenjie.downloadgo.TaskEvent;
 import com.fangwenjie.downloadgo.TaskMsg;
+import com.fangwenjie.downloadgo.task.TaskEvent;
+import com.fangwenjie.downloadgo.task.TaskStatus;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -20,12 +21,14 @@ import butterknife.OnClick;
 
 public class MainActivity extends AppCompatActivity {
 
+    @BindView(R.id.download_content)
+    TextView downloadContent;
 
-    @BindView(R.id.textView)
-    TextView mTextview;
+    @BindView(R.id.button_status)
+    Button status;
 
-    @BindView(R.id.progressBar)
-    ProgressBar progressBar;
+    String downloadUrl = DummyData.FILE_URL_1;
+    private String currentTaskId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,74 +38,86 @@ public class MainActivity extends AppCompatActivity {
         EventBus.getDefault().register(this);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        String scanResult = data.getStringExtra("SCAN_RESULT");
+        downloadContent.setText(scanResult);
+        downloadUrl = scanResult;
+    }
 
     @Override
     protected void onDestroy() {
+        EventBus.getDefault().unregister(this);
         super.onDestroy();
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onHandleStatusEvent(StatusEvent event) {
-        String contentBuilder = mTextview.getText() + "\n" +
-                event.msg;
-        mTextview.setText(contentBuilder);
-
+    @OnClick(R.id.scan_code)
+    public void onClickScan() {
+        if (!TextUtils.isEmpty(downloadUrl)) {
+            downloadContent.setText("Explicit 下载>>:" + downloadUrl);
+            TaskMsg taskMsg = new TaskMsg(TaskMsg.TYPE_EXPLICIT, "silenceTaskDownload", downloadUrl);
+            currentTaskId = taskMsg.taskId;
+            DownloadGo.getInstance().addTask(taskMsg);
+        }
     }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onHandleMsgEvent(MsgEvent event) {
-        progressBar.setProgress(event.progress);
-    }
-
-    private int taskIndex = 0;
-
-    private String taskId;
 
     @OnClick(R.id.button)
-    void onClickLaunchDownloadDog(View view) {
+    public void onClickBtn() {
+        if (!TextUtils.isEmpty(downloadUrl)) {
+            downloadContent.setText("Silence 下载>>:" + downloadUrl);
+            TaskMsg taskMsg = new TaskMsg(TaskMsg.TYPE_SILENCT, "silenceTaskDownload", downloadUrl);
+            currentTaskId = taskMsg.taskId;
+            DownloadGo.getInstance().addTask(taskMsg);
+        }
     }
 
-    @OnClick(R.id.button0)
-    void onClickBindService(View view) {
+    @OnClick(R.id.button_pause)
+    public void onClickPause() {
+        if (!TextUtils.isEmpty(currentTaskId)) {
+            DownloadGo.getInstance().onSendTaskEvent(currentTaskId, TaskEvent.PAUSE);
+        }
     }
 
-    @OnClick(R.id.button1)
-    public void onClickAddDownloadTaskBtn(View view) {
-        taskIndex++;
-        Toast.makeText(getApplicationContext(), "添加下载任务" + taskIndex, Toast.LENGTH_SHORT).show();
-
-        TaskMsg taskMsg = new TaskMsg(
-                "news" + taskIndex,
-                "https://tg.pyw.cn/Ssxy/check?g=3766&p=aqy&c=aqyfxl&adt=3766M8001&a=2390"
-        );
-
-        taskId = DownloadGo.getInstance().addTask(taskMsg);
+    @OnClick(R.id.button_resume)
+    public void onClickResume() {
+        if (!TextUtils.isEmpty(currentTaskId)) {
+            DownloadGo.getInstance().onSendTaskEvent(currentTaskId, TaskEvent.RESUME);
+        }
     }
 
-    @OnClick(R.id.button2)
-    public void onResumeTaskButtonClick(View view) {
-        onSendTaskEvent(taskId, TaskEvent.RESUME);
+    @OnClick(R.id.button_status)
+    public void onClickStatus(Button btnStatus) {
+        if (!TextUtils.isEmpty(currentTaskId)) {
+            int taskStatus = DownloadGo.getInstance().getTaskStatus(currentTaskId);
+            switch (taskStatus) {
+                case TaskStatus.NONE:
+                    btnStatus.setText("NONE");
+                    break;
+                case TaskStatus.STARTED:
+                    btnStatus.setText("started");
+                    break;
+                case TaskStatus.PAUSED:
+                    btnStatus.setText("paused");
+                    break;
+                case TaskStatus.RESUMED:
+                    btnStatus.setText("resumed");
+                    break;
+                case TaskStatus.FINISHED:
+                    btnStatus.setText("finished");
+                    break;
+                case TaskStatus.SUCCED:
+                    btnStatus.setText("succed");
+                    break;
+                case TaskStatus.FAILED:
+                    btnStatus.setText("failed");
+                    break;
+            }
+        }
     }
 
-    @OnClick(R.id.button3)
-    public void onPauseTaskButtonClick(View view) {
-        onSendTaskEvent(taskId, TaskEvent.PAUSE);
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onDownloadEvent(DownloadEvent event) {
+        status.setText(event.status);
     }
-
-    @OnClick(R.id.button4)
-    public void onCancelTaskButtonClick(View view) {
-        onSendTaskEvent(taskId, TaskEvent.CANCEL);
-    }
-
-    /**
-     * 通过任务Id & 任务事件 操作任务
-     *
-     * @param taskId    任务Id
-     * @param taskEvent 任务事件
-     */
-    public void onSendTaskEvent(String taskId, int taskEvent) {
-        DownloadGo.getInstance().onSendTaskEvent(taskId, taskEvent);
-    }
-
-
 }
