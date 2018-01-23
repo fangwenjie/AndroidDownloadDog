@@ -1,4 +1,5 @@
 ## Android 下载工具
+## Download [![](https://jitpack.io/v/fangwenjie/DownloadGo.svg)](https://jitpack.io/#fangwenjie/DownloadGo)
 
 ### ChangeLog
 [change list](/CHANGELOG.md)
