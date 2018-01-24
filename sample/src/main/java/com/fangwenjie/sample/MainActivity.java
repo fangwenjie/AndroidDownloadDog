@@ -7,9 +7,9 @@ import android.text.TextUtils;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.fangwenjie.downloadgo.TaskMsg;
-import com.fangwenjie.downloadgo.task.TaskEvent;
-import com.fangwenjie.downloadgo.task.TaskStatus;
+import com.fangwenjie.ddog.TaskMsg;
+import com.fangwenjie.ddog.task.TaskEvent;
+import com.fangwenjie.ddog.task.TaskStatus;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;

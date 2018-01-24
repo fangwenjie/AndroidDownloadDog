@@ -1,1 +1,1 @@
-include ':sample', ':downloadgo'
+include ':sample', ':ddog'

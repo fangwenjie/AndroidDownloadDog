@@ -37,7 +37,7 @@
         </activity>
 
         <service
-            android:name="com.fangwenjie.downloadgo.DGoService"
+            android:name="com.fangwenjie.ddog.DGoService"
             android:process=":goservice" />
 
     </application>

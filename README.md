@@ -1,5 +1,5 @@
 ## Android 下载工具
-## Download [![](https://jitpack.io/v/fangwenjie/DownloadGo.svg)](https://jitpack.io/#fangwenjie/DownloadGo)
+## Download [![](https://jitpack.io/v/fangwenjie/ddog.svg)](https://jitpack.io/#fangwenjie/ddog)
 
 ### ChangeLog
 [change list](/CHANGELOG.md)

@@ -11,14 +11,14 @@ import android.os.RemoteException;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.fangwenjie.downloadgo.DGoService;
-import com.fangwenjie.downloadgo.GoEvent;
-import com.fangwenjie.downloadgo.GoMsg;
-import com.fangwenjie.downloadgo.IDownloadGoService;
-import com.fangwenjie.downloadgo.IGoMsgCallback;
-import com.fangwenjie.downloadgo.TaskMsg;
-import com.fangwenjie.downloadgo.task.TaskEvent;
-import com.fangwenjie.downloadgo.task.TaskStatus;
+import com.fangwenjie.ddog.DGoService;
+import com.fangwenjie.ddog.GoEvent;
+import com.fangwenjie.ddog.GoMsg;
+import com.fangwenjie.ddog.IDownloadGoService;
+import com.fangwenjie.ddog.IGoMsgCallback;
+import com.fangwenjie.ddog.TaskMsg;
+import com.fangwenjie.ddog.task.TaskEvent;
+import com.fangwenjie.ddog.task.TaskStatus;
 
 import org.greenrobot.eventbus.EventBus;
 
