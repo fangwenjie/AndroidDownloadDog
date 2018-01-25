@@ -92,6 +92,7 @@ public class DownloadGo {
         @Override
         public void onBarkMsg(final GoMsg msg) throws RemoteException {
             Log.d("DownloadGo", "barkMsg:" + msg.progress);
+            EventBus.getDefault().post(new PuppyEvent(msg.progress));
         }
 
         @Override
@@ -100,23 +101,19 @@ public class DownloadGo {
                 case TaskEvent.START:
                     Log.d("DownloadGo", "GoEvent: Start");
                     EventBus.getDefault().post(new DownloadEvent("Started"));
-
                     break;
 
                 case TaskEvent.PAUSE:
                     Log.d("DownloadGo", "GoEvent: Pause");
                     EventBus.getDefault().post(new DownloadEvent("Paused"));
-
                     break;
 
                 case TaskEvent.RESUME:
                     Log.d("DownloadGo", "GoEvent: Resume");
-                    EventBus.getDefault().post(new DownloadEvent("resumed"));
-
+                    EventBus.getDefault().post(new DownloadEvent("Resumed"));
                     break;
                 case TaskEvent.SUCC:
-                    EventBus.getDefault().post(new DownloadEvent("succed"));
-
+                    EventBus.getDefault().post(new DownloadEvent("Succed"));
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
                         @Override
                         public void run() {
@@ -126,8 +123,7 @@ public class DownloadGo {
                     break;
 
                 case TaskEvent.FAIL:
-                    EventBus.getDefault().post(new DownloadEvent("failed"));
-
+                    EventBus.getDefault().post(new DownloadEvent("Failed"));
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
                         @Override
                         public void run() {

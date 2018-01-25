@@ -4,12 +4,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
-import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.fangwenjie.ddog.TaskMsg;
 import com.fangwenjie.ddog.task.TaskEvent;
-import com.fangwenjie.ddog.task.TaskStatus;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -24,8 +23,11 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.download_content)
     TextView downloadContent;
 
-    @BindView(R.id.button_status)
-    Button status;
+    @BindView(R.id.task_status)
+    TextView status;
+
+    @BindView(R.id.task_download_progress)
+    ProgressBar downloadProgress;
 
     String downloadUrl = DummyData.FILE_URL_1;
     private String currentTaskId;
@@ -86,38 +88,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @OnClick(R.id.button_status)
-    public void onClickStatus(Button btnStatus) {
-        if (!TextUtils.isEmpty(currentTaskId)) {
-            int taskStatus = DownloadGo.getInstance().getTaskStatus(currentTaskId);
-            switch (taskStatus) {
-                case TaskStatus.NONE:
-                    btnStatus.setText("NONE");
-                    break;
-                case TaskStatus.STARTED:
-                    btnStatus.setText("started");
-                    break;
-                case TaskStatus.PAUSED:
-                    btnStatus.setText("paused");
-                    break;
-                case TaskStatus.RESUMED:
-                    btnStatus.setText("resumed");
-                    break;
-                case TaskStatus.FINISHED:
-                    btnStatus.setText("finished");
-                    break;
-                case TaskStatus.SUCCED:
-                    btnStatus.setText("succed");
-                    break;
-                case TaskStatus.FAILED:
-                    btnStatus.setText("failed");
-                    break;
-            }
-        }
+    private String getTaskStatus(String taskStatus) {
+        return String.format("TaskStatus:%s", taskStatus);
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onDownloadEvent(DownloadEvent event) {
-        status.setText(event.status);
+        status.setText(getTaskStatus(event.status));
+
+        if (event.status.equals("Succed")){
+            downloadProgress.setProgress(100);
+        }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onPuppyEvent(PuppyEvent event){
+        downloadProgress.setProgress(event.progress);
     }
 }
